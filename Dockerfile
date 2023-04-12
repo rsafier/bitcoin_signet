@@ -1,19 +1,4 @@
-FROM debian:buster-slim as builder
-
-ARG BITCOIN_VERSION=${BITCOIN_VERSION:-24.0.1}
-ARG TRIPLET=${TRIPLET:-"x86_64-linux-gnu"}
-
-RUN  apt-get update && \
-     apt-get install -qq --no-install-recommends ca-certificates dirmngr gosu wget libc6 procps python3
-WORKDIR /tmp
-
-# install bitcoin binaries
-RUN BITCOIN_URL="https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-${TRIPLET}.tar.gz" && \
-     BITCOIN_FILE="bitcoin-${BITCOIN_VERSION}-${TRIPLET}.tar.gz" && \
-     wget -qO "${BITCOIN_FILE}" "${BITCOIN_URL}" && \
-     mkdir -p bin && \
-     tar -xzvf "${BITCOIN_FILE}" -C /tmp/bin --strip-components=2 "bitcoin-${BITCOIN_VERSION}/bin/bitcoin-cli" "bitcoin-${BITCOIN_VERSION}/bin/bitcoind" "bitcoin-${BITCOIN_VERSION}/bin/bitcoin-wallet" "bitcoin-${BITCOIN_VERSION}/bin/bitcoin-util"
-FROM debian:buster-slim as custom-signet-bitcoin
+FROM archlinux as custom-signet-bitcoin
 
 LABEL org.opencontainers.image.authors="NBD"
 LABEL org.opencontainers.image.licenses=MIT
@@ -46,19 +31,40 @@ ENV BLOCKPRODUCTIONDELAY=${BLOCKPRODUCTIONDELAY:-""}
 ENV MINERENABLED=${MINERENABLED:-"1"}
 ENV MINETO=${MINETO:-""}
 ENV EXTERNAL_IP=${EXTERNAL_IP:-""} 
+ENV SIGNET_BLOCKTIME=${SIGNET_BLOCKTIME:-"10"}
 
 VOLUME $BITCOIN_DIR
 EXPOSE 28332 28333 28334 38332 38333 38334
-RUN  apt-get update && \
-     apt-get install -qq --no-install-recommends procps python3 python3-pip jq && \
-     apt-get clean
-COPY --from=builder "/tmp/bin" /usr/local/bin 
+
+RUN  pacman -Sy  --noconfirm 
+RUN pacman --sync  --noconfirm --needed autoconf automake boost gcc git libevent libtool make pkgconf python sqlite db python-pip patch bison
+
+ 
+    
+RUN  git clone https://github.com/benthecarman/bitcoin.git && \
+     cd bitcoin && \
+     git checkout configure-signet-blockitme 
+RUN  cd bitcoin && \
+     make -j $(nproc) -C depends NO_QT=1
+RUN  cd bitcoin && \ 
+     export BDB_PREFIX="/bitcoin/depends/x86_64-pc-linux-gnu" && \
+     ./autogen.sh && \           
+     ./configure \
+     --with-incompatible-bdb \
+     --disable-bench \
+     --disable-tests \
+     --with-gui=no  \
+     --prefix=$BDB_PREFIX \
+     BDB_LIBS="-L${BDB_PREFIX}/lib -ldb_cxx-4.8" \
+     BDB_CFLAGS="-I${BDB_PREFIX}/include" && \
+     make -j $(nproc)  && \
+     make install
 COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY miner_imports /usr/local/bin
-COPY miner /usr/local/bin/miner
+# COPY miner_imports /usr/local/bin
+# COPY /bitcoin/contrib/signet/miner /usr/local/bin/miner
 COPY *.sh /usr/local/bin/
 COPY rpcauth.py /usr/local/bin/rpcauth.py
-RUN pip3 install setuptools
+RUN pip3 install setuptools base58
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 

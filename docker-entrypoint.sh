@@ -8,7 +8,7 @@ shutdown_gracefully(){
   sleep 5
 }
 trap shutdown_gracefully SIGTERM SIGHUP SIGQUIT SIGINT
-
+export PATH="/bitcoin/depends/x86_64-pc-linux-gnu/bin:$PATH"
 mkdir -p "${BITCOIN_DIR}" 
 # check if this is first run if so run init if config
 if [[ ! -f "${BITCOIN_DIR}/install_done" ]]; then
