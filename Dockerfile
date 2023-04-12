@@ -59,12 +59,11 @@ RUN  cd bitcoin && \
      BDB_CFLAGS="-I${BDB_PREFIX}/include" && \
      make -j $(nproc)  && \
      make install
-COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
-# COPY miner_imports /usr/local/bin
-# COPY /bitcoin/contrib/signet/miner /usr/local/bin/miner
+COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh 
 COPY *.sh /usr/local/bin/
 COPY rpcauth.py /usr/local/bin/rpcauth.py
 RUN pip3 install setuptools base58
+RUN  cp /bitcoin/depends/x86_64-pc-linux-gnu/bin/* /usr/local/bin
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
