@@ -1,6 +1,5 @@
 FROM debian:buster-slim as builder
-
-ARG BITCOIN_VERSION=${BITCOIN_VERSION:-24.0.1}
+ARG BITCOIN_VERSION="2a599a3cb645"
 ARG TRIPLET=${TRIPLET:-"x86_64-linux-gnu"}
 
 RUN  apt-get update && \
@@ -8,11 +7,11 @@ RUN  apt-get update && \
 WORKDIR /tmp
 
 # install bitcoin binaries
-RUN BITCOIN_URL="https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-${TRIPLET}.tar.gz" && \
-     BITCOIN_FILE="bitcoin-${BITCOIN_VERSION}-${TRIPLET}.tar.gz" && \
-     wget -qO "${BITCOIN_FILE}" "${BITCOIN_URL}" && \
+RUN BITCOIN_FILE="bitcoin-${BITCOIN_VERSION}-${TRIPLET}.tar.gz?raw=true" && \
      mkdir -p bin && \
+     wget https://github.com/MutinyWallet/mutiny-net/blob/f582bd464ee304cc2f1a5d15737bb57bd5ed4ce5/bitcoin-2a599a3cb645-x86_64-linux-gnu.tar.gz?raw=true && \
      tar -xzvf "${BITCOIN_FILE}" -C /tmp/bin --strip-components=2 "bitcoin-${BITCOIN_VERSION}/bin/bitcoin-cli" "bitcoin-${BITCOIN_VERSION}/bin/bitcoind" "bitcoin-${BITCOIN_VERSION}/bin/bitcoin-wallet" "bitcoin-${BITCOIN_VERSION}/bin/bitcoin-util"
+
 FROM debian:buster-slim as custom-signet-bitcoin
 
 LABEL org.opencontainers.image.authors="NBD"
